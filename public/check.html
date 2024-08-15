@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check In/Out</title>
+</head>
+<body>
+    <h1 id="status">Check In</h1>
+    <form id="attendance-form">
+        <label for="user_email">Email:</label>
+        <input type="email" id="user_email" name="user_email" required>
+        <input type="hidden" name="workplace_idx" value="1">
+        <input type="hidden" name="att_type" value="IN">
+        <button type="submit" id="submit-button">출근</button>
+    </form>
+
+    <script>
+        document.getElementById('attendance-form').addEventListener('submit', async function(event) {
+            event.preventDefault(); // 기본 폼 제출 방지
+
+            const formData = new FormData(event.target);
+            const data = {
+                user_email: formData.get('user_email'),
+                workplace_idx: formData.get('workplace_idx'),
+                att_type: formData.get('att_type')
+            };
+
+            const url = 'http://192.168.219.48:3000/checkInOut';
+            let newAttType = 'IN';
+            let newButtonText = '퇴근';
+
+            // 버튼 텍스트와 URL을 바꾸기 위한 변수 설정
+            if (document.getElementById('submit-button').textContent === '출근') {
+                newAttType = 'IN';
+                newButtonText = '퇴근';
+            } else {
+                newAttType = 'OUT';
+                newButtonText = '출근';
+            }
+
+            // 폼 데이터 업데이트
+            data.att_type = newAttType;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    alert(result.message); // 성공 메시지 표시
+
+                    // 버튼 텍스트와 URL을 변경
+                    document.getElementById('submit-button').textContent = newButtonText;
+                } else {
+                    const errorResult = await response.json();
+                    alert(`Error: ${errorResult.message}`); // 에러 메시지 표시
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while recording attendance'); // 에러 메시지 표시
+            }
+        });
+    </script>
+</body>
+</html>

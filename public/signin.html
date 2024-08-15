@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원가입</title>
+    <link rel="stylesheet" href="styles.css">
+    <script>
+        async function checkEmail() {
+            const emailInput = document.getElementById('email');
+            const email = emailInput.value;
+
+            if (!email) {
+                alert("이메일을 입력해주세요.");
+                return;
+            }
+
+            try {
+                const response = await fetch('http://192.168.219.48:3000/checkEmail', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email: email })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                const emailFeedback = document.getElementById('email-feedback');
+                const signupButton = document.getElementById('signup-button');
+
+                if (result.exists) {
+                    emailFeedback.textContent = '사용할 수 없는 이메일 입니다. 다른 이메일을 입력해주세요.';
+                    emailFeedback.style.color = 'red';
+                    emailInput.setCustomValidity('사용할 수 없는 이메일 입니다.');
+                    signupButton.disabled = true;
+                } else {
+                    emailFeedback.textContent = '사용할 수 있는 이메일 입니다.';
+                    emailFeedback.style.color = 'green';
+                    emailInput.setCustomValidity('');
+                    signupButton.disabled = false;
+                }
+            } catch (error) {
+                console.error('Error checking email:', error);
+            }
+        }
+
+        async function submitForm(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) {
+                    const errorMessage = await response.text();
+                    throw new Error(errorMessage);
+                }
+
+                alert('회원가입 완료!! 로그인 페이지로 이동합니다.');
+                window.location.href = 'login.html'; // 로그인 페이지로 이동
+
+            } catch (error) {
+                alert(`회원가입 실패: ${error.message}`);
+                console.error('Error submitting form:', error);
+            }
+        }
+
+        function disableSignupButton() {
+            const signupButton = document.getElementById('signup-button');
+            signupButton.disabled = true;
+        }
+    </script>
+    <style>
+        /* 추가적인 스타일링 필요 시 작성 */
+        #signup-button:disabled {
+            background-color: #ccc; /* 비활성화 상태 스타일 */
+        }
+    </style>
+</head>
+<body>
+    <div class="signup-container">
+        <h2>회원가입</h2>
+        <form action="http://192.168.219.48:3000/signin" method="post" onsubmit="submitForm(event)">
+            <label for="email">이메일:</label>
+            <input type="email" id="email" name="email" required onblur="checkEmail()" oninput="disableSignupButton()">
+            <div id="email-feedback"></div>
+
+            <label for="password">비밀번호:</label>
+            <input type="password" id="password" name="password" required>
+            
+            <label for="password">비밀번호 확인:</label>
+            <input type="password" id="confirm-password" name="confirm-password" required>
+            
+            <label for="name">이름:</label>
+            <input type="text" id="name" name="name" required>
+            
+            <label for="phone">전화번호:</label>
+            <input type="tel" id="phone" name="phone" required>
+            
+            <label for="joinDate">입사 날짜:</label>
+            <input type="date" id="joinDate" name="joinDate" required>
+            
+            <label for="">관리자 여부:</label>
+            <select id="userRole" name="userRole" required>
+                <option value="U">아니오</option>
+                <option value="M">예</option>
+            </select>
+            
+            <button type="submit" id="signup-button" disabled>회원가입</button>
+        </form>
+    </div>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>마이페이지</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="mypage-container">
+        <h2>마이페이지</h2>
+        <div id="userInfo">
+            <!-- 사용자 정보가 여기에 표시됩니다 -->
+        </div>
+        <button onclick="logout()">로그아웃</button>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/jwt-decode/build/jwt-decode.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('token');
+            
+            if (token) {
+                const decoded = jwt_decode(token);
+                console.log('Decoded JWT:', decoded);
+                
+                const userInfoDiv = document.getElementById('userInfo');
+                userInfoDiv.innerHTML = `
+                    <p>이메일: <span id="email">${decoded.email}</span> <button onclick="editField('email')">수정</button></p>
+                    <p>비밀번호: <button onclick="editField('password')">변경</button></p>
+                    <p>이름: <span id="userName">${decoded.userName}</span> <button onclick="editField('userName')">수정</button></p>
+                    <p>전화번호: <span id="phoneNumber">${decoded.phoneNumber}</span> <button onclick="editField('phoneNumber')">수정</button></p>
+                    <p>가입 날짜: <span id="joinDate">${new Date(decoded.joinDate).toLocaleDateString()}</span> <button onclick="editField('joinDate')">수정</button></p>
+                    <p>역할: ${decoded.userRole}</p>
+                `;
+            } else {
+                window.location.href = 'login.html';
+            }
+        });
+
+        function editField(field) {
+            console.log(`editField called for ${field}`); // 디버깅 메시지
+            const fieldElement = document.getElementById(field);
+            const currentValue = fieldElement.innerText || fieldElement.textContent;
+            
+            if (field === 'joinDate') {
+                fieldElement.innerHTML = `<input type="date" id="new${capitalizeFirstLetter(field)}" value="${currentValue}">
+                                          <button onclick="saveField('${field}')">저장</button>
+                                          <button onclick="cancelEdit('${field}', '${currentValue}')">취소</button>`;
+            } else if (field === 'password') {
+                const userInfoDiv = document.getElementById('userInfo');
+                userInfoDiv.innerHTML = `
+                    <p>새 비밀번호: <input type="password" id="newPassword">
+                    <button onclick="saveField('password')">저장</button>
+                    <button onclick="cancelEdit('password')">취소</button></p>
+                `;
+                console.log('Password edit field created'); // 디버깅 메시지
+            } else {
+                fieldElement.innerHTML = `<input type="text" id="new${capitalizeFirstLetter(field)}" value="${currentValue}">
+                                          <button onclick="saveField('${field}')">저장</button>
+                                          <button onclick="cancelEdit('${field}', '${currentValue}')">취소</button>`;
+            }
+        }
+
+        function saveField(field) {
+            console.log(`Saving field: ${field}`); // 디버깅 메시지
+            const newValue = field === 'password' ? document.getElementById('newPassword').value :
+                                                     document.getElementById(`new${capitalizeFirstLetter(field)}`).value;
+            const token = localStorage.getItem('token');
+            
+            fetch('http://192.168.219.48:3000/infoChange', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` // JWT를 Authorization 헤더에 포함
+                },
+                body: JSON.stringify({ field, value: newValue })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => { // 응답 본문을 읽어서 오류 메시지 확인
+                        throw new Error('Network response was not ok: ' + text);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Update Success:', data);
+                if (field === 'password') {
+                    document.getElementById('userInfo').innerHTML = `
+                        <p>비밀번호: <button onclick="editField('password')">변경</button></p>
+                    `;
+                } else if (field === 'joinDate') {
+                    document.getElementById(field).innerHTML = new Date(newValue).toLocaleDateString() + ` <button onclick="editField('${field}')">수정</button>`;
+                } else {
+                    document.getElementById(field).innerHTML = newValue + ` <button onclick="editField('${field}')">수정</button>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('정보 업데이트에 실패했습니다. 다시 시도해 주세요.');
+            });
+        }
+
+        function cancelEdit(field, oldValue) {
+            console.log(`Cancel edit for ${field}`); // 디버깅 메시지
+            if (field === 'password') {
+                document.getElementById('userInfo').innerHTML = `
+                    <p>비밀번호: <button onclick="editField('password')">변경</button></p>
+                `;
+            } else if (field === 'joinDate') {
+                document.getElementById(field).innerHTML = new Date(oldValue).toLocaleDateString() + ` <button onclick="editField('${field}')">수정</button>`;
+            } else {
+                document.getElementById(field).innerHTML = oldValue + ` <button onclick="editField('${field}')">수정</button>`;
+            }
+        }
+
+        function capitalizeFirstLetter(string) {
+            return string.charAt(0).toUpperCase() + string.slice(1);
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>
